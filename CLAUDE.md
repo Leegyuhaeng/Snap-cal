@@ -161,7 +161,7 @@ npx prisma studio                        # 브라우저 DB 뷰어
 | 0 | 아키텍처 설계 + DB 스키마 설계 | ✅ 완료 |
 | 1 | 프로젝트 초기 세팅 (TS + Express + 3계층 폴더) | ✅ 완료 (검증됨) |
 | 2 | Prisma 연결 + 첫 마이그레이션 | ✅ 완료 (검증됨) |
-| 3 | 회원가입 API (bcrypt + 3계층 첫 실습) | ⬜ |
+| 3 | 회원가입 API (bcrypt + 3계층 첫 실습) | ⬜ **← 다음 시작 지점** |
 | 4 | 로그인 API (JWT 발급) | ⬜ |
 | 5 | 인증 미들웨어 (토큰 검증) | ⬜ |
 | 6 | 신체정보 등록 + BMR/TDEE 계산 | ⬜ |
@@ -200,10 +200,40 @@ npx prisma studio                        # 브라우저 DB 뷰어
   - **검증됨**: `GET /health` → 200 `{"status":"ok","database":"connected"}`
     첫 요청 108ms → 두 번째 1.7ms (커넥션 풀 재사용 확인)
 
-**⬜ 아직 안 한 것**
-- git 초기화 및 첫 커밋 (사용자가 실행. 구조는 확정됨)
-- 로컬 폴더명이 아직 `Calorie-project` (프로젝트명은 snapcal).
-  compose에 `name: snapcal`이 있어 폴더명을 바꿔도 볼륨은 안 깨짐
+- ✅ **git 초기화 + GitHub 푸시 완료**
+  - 저장소: `git@github.com-master:Leegyuhaeng/Snap-cal.git` (main 브랜치, 28개 파일)
+  - ⚠️ **SSH alias 주의**: 사용자는 개인/회사 GitHub 계정을 `~/.ssh/config`로 분리해 씀.
+    - `github.com-master` → 개인 (Leegyuhaeng)
+    - `github.com-greenit` → 회사 (GreenIT-Aaron)
+    - 그냥 `github.com`은 **매핑이 없어 Permission denied가 난다.**
+      clone/remote 주소에 반드시 `-master`를 붙일 것.
+  - SSH 키에 passphrase가 걸려 있어 push 시 입력이 필요하다.
+    (비대화형 셸에서는 `git ls-remote` 등이 실패하니, 원격 확인은 사용자에게 요청할 것)
+
+**⬜ 참고 사항**
+- 로컬 폴더명은 아직 `Calorie-project` (프로젝트명은 snapcal, 저장소는 Snap-cal).
+  compose에 `name: snapcal`이 있어 폴더명을 바꿔도 볼륨은 안 깨진다.
+- `web/`은 빈 폴더. Vue 프로젝트는 아직 시작 안 함.
+
+---
+
+### Step 3 시작 시 할 일 (다음 세션)
+
+1. **작업 재개 준비**: 사용자에게 `cd server && docker compose up -d` 실행 요청
+   (DB가 꺼져 있을 수 있음. `docker compose ps`로 healthy 확인)
+2. **개념 설명 먼저** (코드보다 먼저!):
+   - 3계층이 실제 파일로 어떻게 나뉘는지 — Vue의 composable에 비유
+   - bcrypt: 암호화(복호화 가능)가 아니라 **해싱**(단방향)인 이유, salt와 cost factor
+   - 프론트 검증을 믿으면 안 되는 이유 (curl로 우회 가능)
+3. **만들 파일**:
+   - `src/routes/auth.route.ts`
+   - `src/controllers/auth.controller.ts`
+   - `src/services/auth.service.ts`
+   - `src/utils/AppError.ts` (선택)
+   - `app.ts`에 `app.use('/api/auth', authRouter)` 연결
+4. **주의**: Service는 `req`/`res`를 절대 참조하지 않는다. Controller가 값만 뽑아 넘긴다.
+5. 응답에서 `passwordHash`는 **절대 반환하지 않는다.**
+6. 완료 후 `docs/03-signup-api.md` 작성 + `docs/README.md`·이 파일 §6 갱신
 
 ---
 
