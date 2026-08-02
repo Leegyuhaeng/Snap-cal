@@ -1,0 +1,33 @@
+# ─────────────────────────────────────────────
+# snapcal 모노레포 공통 .gitignore
+#
+# 아래 패턴들은 하위 폴더 어디에서든 적용된다.
+# (server/node_modules, web/node_modules 모두 자동으로 제외됨)
+# ─────────────────────────────────────────────
+
+node_modules/
+dist/
+build/
+
+# ⚠️ 절대 커밋하면 안 되는 파일. DB 비밀번호와 API 키가 들어있다.
+.env
+.env.local
+.env.*.local
+
+# Prisma 가 자동 생성하는 클라이언트 코드.
+# schema.prisma 로부터 언제든 재생성되므로 커밋하지 않는다.
+# (git clone 후 `npx prisma generate` 하면 만들어진다)
+**/src/generated/
+
+# DB 덤프 — 실제 데이터가 들어있으므로 커밋 금지
+*.sql.gz
+dump*.sql
+backup*.sql
+
+*.log
+npm-debug.log*
+.DS_Store
+.vscode/
+.idea/
+coverage/
+.turbo/

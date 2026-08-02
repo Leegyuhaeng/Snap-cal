@@ -1,0 +1,33 @@
+{
+  "name": "snapcal-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "snapcal — AI 음식 사진 칼로리 분석 API 서버",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@prisma/adapter-mariadb": "^7.9.1",
+    "@prisma/client": "^7.9.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^22.10.0",
+    "prisma": "^7.9.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
