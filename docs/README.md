@@ -13,7 +13,7 @@ Vue 프론트엔드 개발자가 백엔드를 처음 배우면서 남기는 기�
 | 0 | [00-architecture.md](./00-architecture.md) | 전체 데이터 흐름, 3계층 구조, DB 설계 | ✅ |
 | 1 | [01-project-setup.md](./01-project-setup.md) | TypeScript + Express 세팅, 미들웨어, 환경변수 | ✅ |
 | 2 | [02-database-setup.md](./02-database-setup.md) | Docker MySQL, 볼륨/포트 보안, Prisma 7, 커넥션 풀, 모노레포 | ✅ |
-| 3 | (예정) | 회원가입 API, bcrypt, 3계층 첫 실습 | ⬜ |
+| 3 | [03-signup-api.md](./03-signup-api.md) | 회원가입 API, 3계층 실전, bcrypt, 상태 코드, 동시성 | ✅ |
 | 4 | (예정) | 로그인 API, JWT 발급 | ⬜ |
 | 5 | (예정) | 인증 미들웨어 | ⬜ |
 | 6 | (예정) | BMR/TDEE 계산 | ⬜ |
@@ -56,6 +56,12 @@ Vue 프론트엔드 개발자가 백엔드를 처음 배우면서 남기는 기�
 | PrismaClient 싱글턴 | `api.ts`에서 한 번 만든 `axios.create()` 인스턴스 |
 | 커넥션 풀 | 미리 열어둔 DB 연결 묶음 (재사용해서 빠름) |
 | `503 Service Unavailable` | "서버는 떴는데 DB가 죽어서 일을 못 함" |
+| Controller | 컴포넌트의 `handleSubmit()` |
+| Service | `useAuth()` composable |
+| `AppError` | 의도한 에러 vs 예상 못 한 에러를 나누는 장치 |
+| 에러 미들웨어 (인자 4개) | 전역 에러 바운더리 |
+| `201 Created` | "새 리소스가 생겼다" (200과 다름) |
+| `409 Conflict` | "현재 상태와 충돌" (이메일 중복) |
 
 ---
 
@@ -66,3 +72,6 @@ Vue 프론트엔드 개발자가 백엔드를 처음 배우면서 남기는 기�
 2. **`userId`는 JWT에서만 꺼낸다.** `?userId=3` 을 믿으면 숫자만 바꿔서 남의 식단을 다 본다.
 3. **`.env`는 절대 커밋하지 않는다.** GitHub에 올라간 키는 봇이 몇 분 안에 긁어간다.
 4. **비밀번호는 평문 저장 금지.** bcrypt 해시만 저장한다.
+5. **프론트 검증은 UX용, 백엔드 검증이 유일한 방어선이다.** `curl` 한 줄이면 프론트는 통째로 우회된다.
+6. **로그인 실패 사유를 구분해서 알려주지 않는다.** "이메일 또는 비밀번호가 올바르지 않습니다" 하나로 통일.
+7. **응답 필드는 `select`로 고른다.** 빼는 방식이 아니라 고르는 방식이어야 실수로 새지 않는다.

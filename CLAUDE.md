@@ -128,11 +128,11 @@ snapcal/
     │   ├── app.ts         # 미들웨어 조립 (listen 하지 않음)
     │   ├── server.ts      # 포트 listen + graceful shutdown
     │   ├── generated/     # Prisma Client (git 제외, 재생성 가능)
-    │   ├── routes/        # (Step 3~)
-    │   ├── controllers/   # (Step 3~)
-    │   ├── services/      # (Step 3~)
+    │   ├── routes/auth.route.ts
+    │   ├── controllers/auth.controller.ts
+    │   ├── services/auth.service.ts
+    │   ├── utils/AppError.ts
     │   ├── middlewares/   # (Step 5~)
-    │   ├── utils/
     │   └── types/
     ├── tsconfig.json
     └── package.json       # name: snapcal-server
@@ -161,8 +161,8 @@ npx prisma studio                        # 브라우저 DB 뷰어
 | 0 | 아키텍처 설계 + DB 스키마 설계 | ✅ 완료 |
 | 1 | 프로젝트 초기 세팅 (TS + Express + 3계층 폴더) | ✅ 완료 (검증됨) |
 | 2 | Prisma 연결 + 첫 마이그레이션 | ✅ 완료 (검증됨) |
-| 3 | 회원가입 API (bcrypt + 3계층 첫 실습) | ⬜ **← 다음 시작 지점** |
-| 4 | 로그인 API (JWT 발급) | ⬜ |
+| 3 | 회원가입 API (bcrypt + 3계층 첫 실습) | ✅ 완료 (검증됨) |
+| 4 | 로그인 API (JWT 발급) | ⬜ **← 다음 시작 지점** |
 | 5 | 인증 미들웨어 (토큰 검증) | ⬜ |
 | 6 | 신체정보 등록 + BMR/TDEE 계산 | ⬜ |
 | 7 | 이미지 업로드 (multer + Cloudinary) | ⬜ |
@@ -217,23 +217,48 @@ npx prisma studio                        # 브라우저 DB 뷰어
 
 ---
 
-### Step 3 시작 시 할 일 (다음 세션)
+### Step 3 완료 내용 (회원가입 API)
 
-1. **작업 재개 준비**: 사용자에게 `cd server && docker compose up -d` 실행 요청
-   (DB가 꺼져 있을 수 있음. `docker compose ps`로 healthy 확인)
-2. **개념 설명 먼저** (코드보다 먼저!):
-   - 3계층이 실제 파일로 어떻게 나뉘는지 — Vue의 composable에 비유
-   - bcrypt: 암호화(복호화 가능)가 아니라 **해싱**(단방향)인 이유, salt와 cost factor
-   - 프론트 검증을 믿으면 안 되는 이유 (curl로 우회 가능)
-3. **만들 파일**:
-   - `src/routes/auth.route.ts`
-   - `src/controllers/auth.controller.ts`
-   - `src/services/auth.service.ts`
-   - `src/utils/AppError.ts` (선택)
-   - `app.ts`에 `app.use('/api/auth', authRouter)` 연결
-4. **주의**: Service는 `req`/`res`를 절대 참조하지 않는다. Controller가 값만 뽑아 넘긴다.
-5. 응답에서 `passwordHash`는 **절대 반환하지 않는다.**
-6. 완료 후 `docs/03-signup-api.md` 작성 + `docs/README.md`·이 파일 §6 갱신
+**만든 파일**
+```
+src/routes/auth.route.ts            POST /signup 연결만
+src/controllers/auth.controller.ts  검증 + service 호출 + 201 포장
+src/services/auth.service.ts        중복확인 → bcrypt → prisma.create
+src/utils/AppError.ts               AppError + isAppError + isHttpErrorLike
+src/app.ts                          authRouter 연결 + 에러 미들웨어 추가
+```
+
+**설치**: `bcrypt` 6.0.0 + `@types/bcrypt` (네이티브 모듈, Node 24에서 정상 동작 확인 / cost 10 = 약 70ms)
+
+**핵심 구현 사항**
+- `SALT_ROUNDS = 10` (로그인 응답 100~250ms 기준. 올릴 땐 서버 CPU 비용 고려)
+- 이메일은 `trim().toLowerCase()` 로 정규화 후 저장·조회
+- 응답은 `select` 화이트리스트 → `passwordHash` 가 애초에 조회되지 않음
+- 동시성: 중복확인과 create 사이 틈 → `P2002` 도 409로 변환 (DB UNIQUE가 최종 방어선)
+- 에러 미들웨어는 **인자 4개**, 맨 마지막. Express 5라 Controller에 try/catch 불필요
+
+**⚠️ 테스트로 잡은 버그 (재발 주의)**
+`express.json()` 이 던지는 파싱 에러는 Controller보다 먼저 발생하며
+`statusCode` + `expose: true` 를 달고 온다. 이걸 AppError만 보고 500으로 처리하면
+명백한 400 요청에 500을 돌려주게 된다 → `isHttpErrorLike()` 로 처리함.
+
+**검증**: 11개 시나리오 전부 통과 (201/409/400 × 형식오류·중복·대문자이메일·깨진JSON 등)
+테스트 유저 2명이 DB에 남아 있음 (`test@snapcal.com`, `second@snapcal.com`, 둘 다 `password123`)
+
+---
+
+### Step 4 시작 시 할 일 (다음 세션)
+
+1. **작업 재개**: `cd /Users/igyuhaeng/project/Calorie-project/server && docker compose up -d`
+   (⚠️ 셸 cwd가 루트로 리셋되는 경우가 잦음. **명령은 항상 절대 경로로 안내할 것**)
+2. **개념 설명 먼저**:
+   - JWT = 놀이공원 손목 밴드 (위조 방지 서명, 무상태)
+   - 토큰 저장 위치 트레이드오프: localStorage(XSS 취약) vs httpOnly 쿠키(CSRF 고려)
+   - **타이밍 공격** — 유저가 없으면 bcrypt를 안 돌려 빨리 응답 → "빠른 실패 = 없는 계정"이 샌다
+3. **만들 것**: `POST /api/auth/login`, `utils/jwt.ts`, `.env`에 `JWT_SECRET`
+4. **🚨 철칙**: 로그인 실패 사유를 구분하지 말 것.
+   이메일 없음/비밀번호 틀림 모두 `401 이메일 또는 비밀번호가 올바르지 않습니다.`
+5. 완료 후 `docs/04-login-jwt.md` 작성 + `docs/README.md`·이 파일 §6 갱신
 
 ---
 
@@ -253,6 +278,11 @@ npx prisma studio                        # 브라우저 DB 뷰어
 | `Meal.status` 컬럼 선반영 | 현재는 동기 처리지만, 향후 큐 기반 비동기 전환 시 스키마 변경 없이 대응 |
 | `AiAnalysisLog` 테이블 | AI 원본 응답 보관. 프롬프트 개선·모델 비교·디버깅에 필수 |
 | `eatenAt` / `createdAt` 분리 | 어젯밤 야식을 오늘 아침에 기록하는 경우. 캘린더는 `eatenAt` 기준 |
+| bcrypt cost 10 | 실측 70ms. cost 비용은 해커가 아니라 **우리 서버**가 냄. 동시 로그인 시 스레드풀 포화 → 자체 DoS 위험 |
+| 이메일 소문자 정규화 | `Test@a.com` 과 `test@a.com` 이 다른 계정이 되면 안 됨 |
+| 응답에 `select` 화이트리스트 | "빼는" 방식은 컬럼 추가 시 새어나감. "고르는" 방식이 안전 |
+| 회원가입 중복은 409로 명시 | user enumeration 위험은 있으나 UX 손실이 더 큼. GitHub/Google도 동일. Step 10에서 rate limiting으로 보완 |
+| 입력 검증을 손으로 작성 | zod를 쓰면 편하지만, 검증이 왜 필요한지 먼저 체득하는 게 학습에 나음. 나중에 교체 가능 |
 
 ---
 
